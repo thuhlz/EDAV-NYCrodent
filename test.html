@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<meta charset='utf-8'>
+<title>NY Counties</title>
+<style>
+body {
+  margin: 0;
+  background-color: #eee;
+}
+
+.info {
+  position: absolute;
+  top: 50px;
+  left: 50px;
+}
+</style>
+<div class="info"></div>
+<svg width="960" height="500" stroke="#000" stroke-linejoin="round" stroke-linecap="round">
+  <defs>
+    <filter id="blur">
+      <feGaussianBlur stdDeviation="5"></feGaussianBlur>
+    </filter>
+  </defs>
+</svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://unpkg.com/topojson-client@3"></script>
+<script>
+
+// This demo modified slightly from https://bl.ocks.org/mbostock/4108203
+
+var svg = d3.select("svg");
+
+var defs = svg.select("defs");
+
+// New York central state plane, EPSG: 2829
+// (central meridian = - 76.5833..., latitute of origin = 40)
+var projection = d3.geoTransverseMercator()
+        .rotate([76 + 35 / 60, - 40]);
+
+var path = d3.geoPath()
+    .projection(projection);
+
+// Load the topojson and the population data
+  var counties = "https://raw.githubusercontent.com/MingfengKeith/edav_project/master/ziocode.topojson";
+  var population = "https://raw.githubusercontent.com/umbcvis/classes/master/class-14/population.json";
+d3.queue()
+    .defer(d3.json, counties)
+    .defer(d3.json, population)
+    .await(ready);
+
+// Wait for the data to arrive, then begin processing
+function ready(error, us, population) {
+  if (error) throw error;
+
+  // Make the population data easy to query by FIPS code
+  var data = d3.map();
+  population.forEach(function(d, i) {
+    if (i === 0) return;  // skip the first line in the population data
+    data.set(d[1] + d[2], +d[0]);
+  });
+
+  // Convert the topojson to an array of GeoJSON counties
+  var counties = topojson.feature(us, us.objects.counties);
+
+  // Get NY counties as array of GeoJSON features
+  var newyork = counties.features.filter(function(d) { return d.properties.CTY_FIPS === '061' })
+
+  // Inspect the data in the developer console
+  console.log('here is the population data:', population[0], population[1]);
+  console.log('here is one of the counties:', newyork[0]);
+
+  projection.fitExtent([[0,0],[960, 500]], { type: "FeatureCollection", features: newyork });
+
+  // Plot the boundary of the US
+  svg.append("path")
+      .attr("id", "nation")
+      .attr("d", path(topojson.merge(us, us.objects.counties.geometries)))
+      .attr("stroke-width", 2)
+
+  // Drop-shadow styling (this is blurred shadow)
+  svg.append("use")
+      .attr("xlink:href", "#nation")
+      .attr("fill-opacity", 0.2)
+      .attr("filter", "url(#blur)");
+
+  // Drop-shadow styling (this is white overlay)
+  svg.append("use")
+      .attr("xlink:href", "#nation")
+      .attr("fill", "#fff");
+
+  // Plot the state boundaries
+  svg.append("path")
+      .attr("stroke-width", 1)
+      .attr("fill", "none")
+      .attr("d", path(topojson.mesh(us, us.objects.counties, function(a, b) { return a.properties.ST_FIPS !== b.properties.ST_FIPS; })));
+
+  // Plot the individual counties
+  svg.selectAll('path.county')
+      .data( newyork )
+    .enter().append("path")
+      .attr("d", path)
+      .attr("class", "county")
+      .attr("fill", "#fff")
+      .attr("stroke", "#aaa")
+      .attr("stroke-width", 0.5)
+      .on('mouseover', function(d, i) {
+        console.log('mouseover:', i, d);
+        d3.select(this).attr('fill', 'crimson');
+        d3.select(".info").html(d.properties.NAME + " County"
+                              + "<br>Population: "
+                             + d3.format(",d")(data.get(d.properties.GEOID)))
+      })
+      .on('mouseout', function(d) {
+        d3.select(this).attr('fill', '#fff');
+        d3.select(".info").html("")
+      });
+}
+
+</script>

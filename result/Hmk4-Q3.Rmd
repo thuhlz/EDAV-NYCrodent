@@ -1,0 +1,68 @@
+---
+title: 'Homework #4 Q3'
+author: "Nan You"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE,
+                      warning = FALSE)
+```
+
+## Question 3
+
+Begin the analysis of one variable in the dataset you are using the final project.  As this is an individual homework assignment, each group member should choose a different variable. Choose three visualizations as appropriate to show the distribution of the variable, conditioned on another variable if desired (for example, the distribution of income by region).  Write a few sentences describing what you found and what new questions your visualizations have generated. (Faceted graphs count as one graph; graphs put together with grid.arrange() or similar count as multiple graphs.)   
+
+      
+```{r}
+library(ggplot2)
+library(forcats)
+
+set.seed(1)
+data <- read.csv("Rodent_Inspection_77K_Sample_Clean.csv")
+summary(data)
+ggplot(data,aes(x = fct_infreq(RESULT))) +
+  geom_bar(fill = "lightsteelblue2", color = "#473e2c") +
+  ggtitle("Frequency Bar Graph for RESULT") + xlab("Result")
+
+```
+
+The bar graph shows the distribution of `RESULT`. `Passed Inspection` appears to be significantly high frequency. Bait applied, Active Rat Sign, and Problem Conditions follow, and these three results have closed number of counts.  
+
+
+```{r, fig.height=4, fig.width=5}
+library(vcd)
+library(grid)
+library(tidyverse)
+
+counts <- data %>%
+  group_by(RESULT, BOROUGH) %>%
+  summarise(Freq = n()) %>%
+  ungroup() %>%
+  arrange(desc(Freq)) %>%
+  complete(RESULT, BOROUGH)
+counts$RESULT <- factor(counts$RESULT, 
+                                levels = c('Passed Inspection','Bait applied','Active Rat Sign','Problem Conditions','Monitoring visit','Cleanup done'))
+counts$BOROUGH <- factor(counts$BOROUGH,
+                         levels=c('Manhattan','Bronx','Brooklyn','Queens','Staten Island'))
+mosaic(factor(RESULT)~BOROUGH, counts,
+       direction = c('v','h'),gp_labels=(gpar(fontsize=10)))
+```
+
+The masaic plot appears that there is some association between `RESULT` and `BOROUGH`. Manhattan appears to have the largest proportion of Passed Inspection, Bronx has the second largest, Brooklyn follows, while Staten Island has the smallest.  
+
+
+```{r}
+library(hexbin) 
+library(dplyr)
+ggplot(data, aes(RESULT, BOROUGH)) + 
+  theme_classic(18) + 
+  geom_bin2d(bins = 15)+
+  theme(text=element_text(size=10))
+```
+
+The heatmap shows the approximate count of each result in each borough. The count of Passed Inspection appears relatively very high in Manhattan, Bronx, and Brooklyn, which is consistent with the findings in the mosaic plot. 
+
+New question: how does the distribution of `RESULT` differ by smaller areas?

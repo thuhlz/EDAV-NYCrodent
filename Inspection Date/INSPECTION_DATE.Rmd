@@ -1,0 +1,66 @@
+---
+title: "Hmk4-Q3"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 3
+
+Begin the analysis of one variable in the dataset you are using the final project.  As this is an individual homework assignment, each group member should choose a different variable. Choose three visualizations as appropriate to show the distribution of the variable, conditioned on another variable if desired (for example, the distribution of income by region).  Write a few sentences describing what you found and what new questions your visualizations have generated. (Faceted graphs count as one graph; graphs put together with grid.arrange() or similar count as multiple graphs.)
+
+Read data
+```{r}
+library(tidyverse)
+data = read.csv('Rodent_Inspection_77K_Sample_Clean 1.csv',
+                header = TRUE,na.strings = "n/a")
+head(data,20)
+```
+
+Because the data are huge and contain . To make visualization simpler and more direct I decide to manipulate time data to year-month data at first. 
+```{r}
+data$INSPECTION_DATE = format(as.Date(data$INSPECTION_DATE),format='%y-%m')
+data$INSPECTION_DATE = paste(data$INSPECTION_DATE, "01", sep="-")
+```
+And I then start exploring from year to find out the overall trend.
+```{r}
+ ggplot(data, aes(as.Date(INSPECTION_DATE))) + 
+  geom_histogram(binwidth = 365) + 
+  scale_x_date(date_breaks = "1 year", date_labels = "%b %y")
+
+```
+Based on the graph above, the number of rodent inspection is generally increasing but it dropped down in 2013.
+
+And then I checked the monthly change of the data.
+```{r, fig.width= 10, fig.height=10}
+ggplot(data, aes(as.Date(INSPECTION_DATE))) + 
+  geom_bar(position = position_dodge(width = 1/3)) +
+  scale_x_date(date_breaks = "6 months", date_labels = "%b %y")
+```
+From the Figure above, we can find that in most years, rodent inspection happened fewer from November to Feburary which are usually cold.
+
+
+To further explore the how different month influences the the number of rodent inspection, I chose to use heat map to find the relationship between month and borough.
+```{r,fig.width= 10, fig.height=5}
+data$INSPECTION_M = format(as.Date(data$INSPECTION_DATE),format='%m')
+ggplot(data,aes(x=INSPECTION_M, y = BOROUGH)) + 
+  geom_bin2d(binwidth = c(3, 1)) + 
+  scale_fill_gradient(low = 'lightyellow',high = 'red')
+```
+As shown above, we can easily draw the conclusion that most rodent inspections happened in Manhattan and Bronx from March to October.
+
+```{r}
+data$INSPECTION_Y = format(as.Date(data$INSPECTION_DATE),format='%y')
+
+
+ggplot(data, aes(x = as.numeric(data$INSPECTION_Y),
+                 group = data$BOROUGH, colour = as.factor(data$BOROUGH))) + 
+  geom_line(stat = 'count') 
+```
+Based on the graph above and first histogram, we can find that Queens and Staten Island have rather steady Rodent Inspection while Manhattan and Brooklyn mainly lead to decreasing of Rodent Inspection from 2013 to 2015. And the number of Rodent Inspection in Bronx is generally increasing.
+
+According to the graphs above focusing on the time data, we can find the main trend of Rodent Inspection is increasing. And different borough has different distribution of Rodent Inspection. Further more, we can find that the month is related to Rodent Inspection, especially in Manhattan and Bronx.
